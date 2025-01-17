@@ -1,0 +1,14 @@
+@keyframes shimmer {
+  0% {
+    left: 0%;
+  }
+
+  100% {
+    left: 100%;
+  }
+}
+
+.animate-shimmer {
+  animation: 1.5s ease-in-out infinite shimmer;
+}
+/*# sourceMappingURL=index.c41b5a0e.css.map */
