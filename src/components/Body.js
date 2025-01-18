@@ -5,61 +5,17 @@ import { Link } from "react-router";
 import {generateRestaurantURL} from "../utils/constant";
 import { useSelector } from "react-redux";
 import { MenuCard } from "./MenuCard";
+import { useRestaurants } from "../utils/useRestaurants";
 
 const Body = () => {
-  const [listOfRestaurants, setListOfRestaurants] = useState([]);
-  const [filteredRestaurants, setFilteredRestaurants] = useState([]);
   const [searchTxt, setSearchTxt] = useState("");
-  const [menuCard, setMenuCard] = useState("");
   const {latitude, longitude} = useSelector((state) => state.location);
-  const filterBtn = ['Rating 4.0+', 'Rs. 300-Rs. 600', 'Offers' , 'Less than Rs. 300'];
-  const [selectedFilter, setSelectedFilter] = useState();
-
-  const [topRestaurantHeader, setTopRestaurantHeader] = useState()
-  const [title, setTitle] = useState();
-
-  useEffect(() => {
-    getRestaurants();
-  }, [latitude, longitude]);
-
-  const getRestaurants = async () => {
-
-    try{
-      const response = await fetch(generateRestaurantURL(latitude, longitude));
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status} ${response.statusText}`);
-      }
-      const json = await response.json();
-      
-      const cardData = json?.data?.cards || [];
-      const restaurantsCard = cardData.find(
-        (card) => card?.card?.card?.gridElements?.infoWithStyle?.restaurants
-      );
-      // const restaurants =  cardData[1]?.card?.card?.gridElements?.infoWithStyle?.restaurants || cardData[2]?.card?.card?.gridElements?.infoWithStyle?.restaurants || [];
-      const restaurants = restaurantsCard?.card?.card?.gridElements?.infoWithStyle?.restaurants || [];
-      // setTopRestaurantHeader(cardData[1]?.card?.card?.header?.title || "Top Restaurants")
-      // setTitle(cardData[2].card.card.title || "Featured Restaurants");
-      setTopRestaurantHeader(cardData.find(card => card?.card?.card?.header)?.card?.card?.header?.title || "Top Restaurants");
-      setTitle(cardData.find(card => card?.card?.card?.title)?.card?.card?.title || "Featured Restaurants");
-
-      setListOfRestaurants(restaurants);
-      setFilteredRestaurants(restaurants); 
-      setMenuCard(cardData[0]?.card?.card || {});
-    }
-    catch(error){
-    console.error("Failed to fetch restaurants:", error);
-    setListOfRestaurants([]); // Optional fallback
-    setFilteredRestaurants([]);
-    }
-  };
+  const filterOptions = ['Rating 4.0+', 'Rs. 300-Rs. 600', 'Offers' , 'Less than Rs. 300'];
+  const [activeFilterIndex, setActiveFilterIndex] = useState();
+  const {restaurants, setRestaurants}  = useRestaurants(latitude, longitude);
+  const { list: listOfRestaurants, filtered: filteredRestaurants, menu: menuData, headers } = restaurants;
 
   const filterRestaurants = (index) => {
-    if (selectedFilter === index) {
-      // Reset the filter when the same button is clicked again
-      setFilteredRestaurants(listOfRestaurants);
-      setSelectedFilter(null);
-    } 
-    else {
      // Apply the selected filter
      let filteredList = [];
 
@@ -91,19 +47,17 @@ const Body = () => {
          });
          break;
        default:
-         break;
+        filteredList = listOfRestaurants;
      }
- 
-     setFilteredRestaurants(filteredList);
-     setSelectedFilter(index);
-  }
+     setRestaurants((prev) => ({...prev, filtered: activeFilterIndex === index ? listOfRestaurants : filteredList}))
+     setActiveFilterIndex(activeFilterIndex == index ? null : index);
   }
 
   const handleSearch = () => {
     const filteredList = listOfRestaurants.filter((res) =>
       res?.info?.name.toLowerCase().includes(searchTxt.toLowerCase())
     );
-    setFilteredRestaurants(filteredList);
+    setRestaurants((prev) => ({ ...prev, filtered: filteredList }));
   }
 
   if (!listOfRestaurants.length) return <Shimmer />;
@@ -111,16 +65,16 @@ const Body = () => {
   return (
     <div className="Body w-10/12 m-auto">
 
-      <MenuCard title={menuCard?.header?.title} card={'dishes'} data = {menuCard}/>
+      <MenuCard title={menuData?.header?.title} card={'dishes'} data = {menuData}/>
       
     <hr className="w-full h-2 my-10" />
 
 
-      <MenuCard title={topRestaurantHeader} card={'restaurant'} data = {listOfRestaurants}/>
+      <MenuCard title={headers.top} card={'restaurant'} data = {listOfRestaurants}/>
 
 
      <hr className="w-full h-2 my-10" />
-      <h2 className="font-[700] text-2xl mt-6 ml-6"> {title} </h2>
+      <h2 className="font-[700] text-2xl mt-6 ml-6"> {headers.featured} </h2>
       <div className="flex">
         <div className="m-4 mr-0 p-4 pr-0">
           <input
@@ -141,8 +95,8 @@ const Body = () => {
         </div>
 
         <div className="p-4 flex items-center gap-2">
-          {filterBtn.map((btn, index) => (
-             <button key={index} className={`px-6 py-2 rounded-full border border-gray-400 ${selectedFilter === index && 'bg-orange-400'}`} onClick={() => filterRestaurants(index)}> {btn} </button>
+          {filterOptions.map((btn, index) => (
+             <button key={index} className={`px-6 py-2 rounded-full border border-gray-400 ${activeFilterIndex === index && 'bg-orange-400'}`} onClick={() => filterRestaurants(index)}> {btn} </button>
           ))}
         </div>
       </div>
